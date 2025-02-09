@@ -1,33 +1,46 @@
 package com.SocialX.ID_AUTH_SERVICE;
 
+import com.SocialX.ID_AUTH_SERVICE.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // Register the JWT authentication filter as a bean
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF protection if you're building a stateless API
+                // Disable CSRF for stateless APIs
                 .csrf(csrf -> csrf.disable())
 
-                // Allow access to the H2 console and the registration endpoint without authentication
+                // Set session management to stateless
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Configure URL-based authorization
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/h2-console/**").permitAll()  // Permit all access to H2 console
-                        .requestMatchers("/api/auth/register").permitAll() // Permit access to registration endpoint
+                        // Allow unauthenticated access to login and registration endpoints
+                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                        // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )
 
-                // Disable frame options to allow the H2 console to display its UI
-                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
+                // Add the JWT filter before the UsernamePasswordAuthenticationFilter
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
 
-                // Enable HTTP Basic authentication for other endpoints if necessary
+                // Use HTTP Basic for any fallback (optional)
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();

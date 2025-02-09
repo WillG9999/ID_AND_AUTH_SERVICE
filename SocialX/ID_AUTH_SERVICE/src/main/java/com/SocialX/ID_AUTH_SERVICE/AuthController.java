@@ -1,37 +1,53 @@
 package com.SocialX.ID_AUTH_SERVICE;
 
-import com.SocialX.ID_AUTH_SERVICE.User;
-import com.SocialX.ID_AUTH_SERVICE.UserRepository;
+import com.SocialX.ID_AUTH_SERVICE.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-@RestController  // Marks this class as a REST controller
-@RequestMapping("/api/auth")  // Base URL for all authentication-related endpoints
+@RestController
+@RequestMapping("/api/auth")
 public class AuthController {
 
-    @Autowired  // Injects the UserRepository dependency
-    private UserRepository userRepository;
+    @Autowired
+    private AuthenticationManager authenticationManager; // Used to authenticate the user's credentials
 
-    @Autowired  // Injects the PasswordEncoder bean for encoding passwords
-    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private JwtUtil jwtUtil;
 
-    @PostMapping("/register")  // Maps POST requests to /api/auth/register to this method
+    // Registration endpoint (example provided earlier)
+    @PostMapping("/register")
     public String register(@RequestBody User user) {
-        // Check if the username already exists
-        if(userRepository.findByUsername(user.getUsername()).isPresent()){
-            return "Error: Username is already taken!";
-        }
-
-        // Encode the password before saving
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        // Set a default role for the user (e.g., ROLE_USER)
-        user.setRoles("ROLE_USER");
-        // Save the new user to the database
-        userRepository.save(user);
+        // Registration logic here (save user, encode password, etc.)
         return "User registered successfully";
     }
+
+    // Login endpoint
+    @PostMapping("/login")
+    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+        // Authenticate the user using the AuthenticationManager
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginRequest.getUsername(),
+                        loginRequest.getPassword()
+                )
+        );
+
+        // Set the authentication in the SecurityContext (optional, for further use)
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Generate a JWT token using the username from the authentication principal
+        String jwt = jwtUtil.generateToken(authentication.getName());
+
+        // Return the token in the response
+        return ResponseEntity.ok(new JwtAuthenticationResponse(jwt));
+    }
 }
+
 
 /*
 Explanation:
