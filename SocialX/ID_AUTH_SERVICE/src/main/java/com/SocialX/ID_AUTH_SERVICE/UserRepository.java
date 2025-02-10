@@ -3,20 +3,23 @@ package com.SocialX.ID_AUTH_SERVICE;
 
 // Import the JpaRepository interface from Spring Data JPA
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 // Import Optional from the Java standard library
 import java.util.Optional;
 
-// Import the User entity. Make sure the User class is in the correct package.
-import com.SocialX.ID_AUTH_SERVICE.User;
-
 // Declare the repository interface by extending JpaRepository.
 // The first parameter is the entity type (User) and the second is the type of the entity's primary key (Long).
+@Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
     // Custom method to find a user by their username.
     // Spring Data JPA will automatically implement this method based on the method name.
     Optional<User> findByUsername(String username);
+
+    // Custom method to find a user by their email.
+    // Spring Data JPA will automatically implement this method based on the method name.
+    Optional<User> findByEmail(String email);
 }
 
 /*
@@ -35,6 +38,9 @@ Comprehensive Explanation:
 
 4. Custom Method Declaration:
    - 'Optional<User> findByUsername(String username);'
-     * This method uses Spring Data JPA’s naming conventions to automatically generate the required query.
+     * This method uses Spring Data JPA's naming conventions to automatically generate the required query.
      * It returns an Optional<User>, which will contain the User if found, or be empty if no user exists with the provided username.
+   - 'Optional<User> findByEmail(String email);'
+     * This method uses Spring Data JPA's naming conventions to automatically generate the required query.
+     * It returns an Optional<User>, which will contain the User if found, or be empty if no user exists with the provided email.
 */

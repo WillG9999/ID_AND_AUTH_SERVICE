@@ -7,6 +7,15 @@ import jakarta.persistence.Table;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Column;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.stream.Collectors;
 
 /**
  * The @Entity annotation tells Hibernate (and JPA) that this class is a persistent entity.
@@ -17,8 +26,9 @@ import jakarta.persistence.Id;
  * The @Table annotation allows you to specify the table name in the database.
  * Here, we use "users" (instead of "user") to avoid conflict with the reserved keyword "user".
  */
+
 @Table(name = "users")
-public class User {
+public class User implements UserDetails {
 
     /**
      * The @Id annotation marks this field as the primary key.
@@ -28,48 +38,288 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // The username field to store the user's name.
+    // SocialX Core User Fields
+    @Column(name = "X_username", unique = true, nullable = false)
     private String username;
 
-    // The password field to store the user's (encoded) password.
+    @Column(name = "X_password", nullable = false)
     private String password;
 
-    // The roles field to store a comma-separated list of roles (e.g., "ROLE_USER,ROLE_ADMIN").
+    @Column(name = "X_email", unique = true, nullable = false)
+    private String email;
+
+    @Column(name = "X_roles")
     private String roles;
+
+    // SocialX Security Fields
+    @Column(name = "X_enabled")
+    private boolean enabled = true;
+
+    @Column(name = "X_account_non_expired")
+    private boolean accountNonExpired = true;
+    
+    @Column(name = "X_failed_attempt")
+    private int failedAttempt;
+    
+    @Column(name = "X_lock_time")
+    private Date lockTime;
+    
+    @Column(name = "X_last_password_change")
+    private Date lastPasswordChangeDate;
+    
+    @Column(name = "X_password_expiry")
+    private Date passwordExpiryDate;
+
+    // SocialX Email Verification
+    @Column(name = "X_email_verified")
+    private boolean emailVerified = false;
+    
+    @Column(name = "X_email_verification_token")
+    private String emailVerificationToken;
+    
+    @Column(name = "X_email_token_expiry")
+    private Date emailTokenExpiry;
+
+    // Instagram Integration Fields
+    @Column(name = "IG_username")
+    private String instagramUsername;
+    
+    @Column(name = "IG_access_token", length = 1000)
+    private String instagramAccessToken;
+    
+    @Column(name = "IG_token_expiry")
+    private Date instagramTokenExpiry;
+    
+    @Column(name = "IG_refresh_token", length = 1000)
+    private String instagramRefreshToken;
+    
+    @Column(name = "IG_last_sync")
+    private Date instagramLastSync;
+
+    // Add SocialX Token Fields
+    @Column(name = "X_access_token", length = 1000)
+    private String socialXAccessToken;
+    
+    @Column(name = "X_refresh_token", length = 1000)
+    private String socialXRefreshToken;
+    
+    @Column(name = "X_token_expiry")
+    private Date socialXTokenExpiry;
+    
+    @Column(name = "X_token_issued")
+    private Date socialXTokenIssued;
 
     // Default constructor required by JPA.
     public User() {}
 
-    // Getter and setter for id.
+    // Basic getters and setters
     public Long getId() {
         return id;
     }
+
     public void setId(Long id) {
         this.id = id;
     }
 
-    // Getter and setter for username.
-    public String getUsername() {
-        return username;
+    public String getRoles() {
+        return roles;
     }
+
+    public void setRoles(String roles) {
+        this.roles = roles;
+    }
+
     public void setUsername(String username) {
         this.username = username;
     }
 
-    // Getter and setter for password.
-    public String getPassword() {
-        return password;
-    }
     public void setPassword(String password) {
         this.password = password;
     }
 
-    // Getter and setter for roles.
-    public String getRoles() {
-        return roles;
+    // UserDetails interface implementations
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (roles == null || roles.isEmpty()) {
+            return Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"));
+        }
+        return Arrays.stream(roles.split(","))
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
     }
-    public void setRoles(String roles) {
-        this.roles = roles;
+
+    @Override
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
+    public String getUsername() {
+        return username;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return accountNonExpired;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        if (lockTime == null) {
+            return true;
+        }
+        // Check if lock time has passed (e.g., 24 hours)
+        long lockTimeInMillis = 24 * 60 * 60 * 1000; // 24 hours
+        return new Date().getTime() - lockTime.getTime() > lockTimeInMillis;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        if (passwordExpiryDate == null) {
+            return true;
+        }
+        return new Date().before(passwordExpiryDate);
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    // Instagram-specific methods
+    public boolean isInstagramConnected() {
+        return instagramUsername != null && 
+               instagramAccessToken != null && 
+               isInstagramTokenValid();
+    }
+
+    public boolean isInstagramTokenValid() {
+        return instagramTokenExpiry != null && 
+               instagramAccessToken != null && 
+               new Date().before(instagramTokenExpiry);
+    }
+
+    // New getters and setters for Instagram fields
+    public String getInstagramUsername() {
+        return instagramUsername;
+    }
+
+    public void setInstagramUsername(String instagramUsername) {
+        this.instagramUsername = instagramUsername;
+    }
+
+    public String getInstagramAccessToken() {
+        return instagramAccessToken;
+    }
+
+    public void setInstagramAccessToken(String instagramAccessToken) {
+        this.instagramAccessToken = instagramAccessToken;
+    }
+
+    public Date getInstagramTokenExpiry() {
+        return instagramTokenExpiry;
+    }
+
+    public void setInstagramTokenExpiry(Date instagramTokenExpiry) {
+        this.instagramTokenExpiry = instagramTokenExpiry;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    // Add setters for security fields
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void setAccountNonExpired(boolean accountNonExpired) {
+        this.accountNonExpired = accountNonExpired;
+    }
+
+    public void setLastPasswordChangeDate(Date lastPasswordChangeDate) {
+        this.lastPasswordChangeDate = lastPasswordChangeDate;
+    }
+
+    public void setPasswordExpiryDate(Date passwordExpiryDate) {
+        this.passwordExpiryDate = passwordExpiryDate;
+    }
+
+    // Add setters for Instagram fields
+    public void setInstagramRefreshToken(String instagramRefreshToken) {
+        this.instagramRefreshToken = instagramRefreshToken;
+    }
+
+    public void setInstagramLastSync(Date instagramLastSync) {
+        this.instagramLastSync = instagramLastSync;
+    }
+
+    public void setEmailVerificationToken(String emailVerificationToken) {
+        this.emailVerificationToken = emailVerificationToken;
+    }
+
+    public void setEmailTokenExpiry(Date emailTokenExpiry) {
+        this.emailTokenExpiry = emailTokenExpiry;
+    }
+
+    public void setFailedAttempt(int failedAttempt) {
+        this.failedAttempt = failedAttempt;
+    }
+
+    public void setLockTime(Date lockTime) {
+        this.lockTime = lockTime;
+    }
+
+    // Add getters and setters for new fields
+    public String getSocialXAccessToken() {
+        return socialXAccessToken;
+    }
+
+    public void setSocialXAccessToken(String socialXAccessToken) {
+        this.socialXAccessToken = socialXAccessToken;
+    }
+
+    public String getSocialXRefreshToken() {
+        return socialXRefreshToken;
+    }
+
+    public void setSocialXRefreshToken(String socialXRefreshToken) {
+        this.socialXRefreshToken = socialXRefreshToken;
+    }
+
+    public Date getSocialXTokenExpiry() {
+        return socialXTokenExpiry;
+    }
+
+    public void setSocialXTokenExpiry(Date socialXTokenExpiry) {
+        this.socialXTokenExpiry = socialXTokenExpiry;
+    }
+
+    public Date getSocialXTokenIssued() {
+        return socialXTokenIssued;
+    }
+
+    public void setSocialXTokenIssued(Date socialXTokenIssued) {
+        this.socialXTokenIssued = socialXTokenIssued;
+    }
+
+    // Add helper method to check SocialX token validity
+    public boolean isSocialXTokenValid() {
+        return socialXTokenExpiry != null && 
+               socialXAccessToken != null && 
+               new Date().before(socialXTokenExpiry);
     }
 }
 

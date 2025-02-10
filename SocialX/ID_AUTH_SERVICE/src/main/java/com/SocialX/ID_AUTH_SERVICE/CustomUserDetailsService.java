@@ -1,11 +1,6 @@
 package com.SocialX.ID_AUTH_SERVICE;
 // Declares the package in which this class resides
 
-// Import the User entity that represents the user in the database
-import com.SocialX.ID_AUTH_SERVICE.User;
-// Import the UserRepository interface for accessing user data from the database
-import com.SocialX.ID_AUTH_SERVICE.UserRepository;
-
 // Import Spring's annotation for dependency injection
 import org.springframework.beans.factory.annotation.Autowired;
 // Import the SimpleGrantedAuthority class used to represent a user's role/authority
@@ -22,8 +17,6 @@ import org.springframework.stereotype.Service;
 // Import utilities for array manipulation and stream processing
 import java.util.Arrays;
 import java.util.List;
-// Import the Optional class from java.util to handle potential null values in a functional style
-import java.util.Optional;
 // Import the Collectors utility to convert a stream to a list
 import java.util.stream.Collectors;
 
